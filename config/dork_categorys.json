@@ -1,0 +1,236 @@
+{
+  "dorks": {
+    "api": {
+      "description": "API surface and machine-readable specs on {TARGET}",
+      "operators": [
+        "site:{TARGET} inurl:swagger",
+        "site:{TARGET} inurl:openapi.json",
+        "site:{TARGET} inurl:graphql",
+        "site:{TARGET} inurl:\"/api/v1\"",
+        "site:{TARGET} inurl:\"/api/v2\"",
+        "site:{TARGET} inurl:wp-json",
+        "site:{TARGET} intitle:\"Swagger UI\""
+      ],
+      "operators_out": [
+        "{TARGET} \"swagger\"",
+        "{TARGET} \"openapi.json\"",
+        "{TARGET} \"graphql\"",
+        "{TARGET} \"wp-json\"",
+        "{TARGET} \"Swagger UI\""
+      ]
+    },
+    "backup": {
+      "description": "Backup and archive artifacts left reachable on {TARGET}",
+      "operators": [
+        "site:{TARGET} ext:zip | ext:rar | ext:7z",
+        "site:{TARGET} ext:sql.gz | ext:sql.zip",
+        "site:{TARGET} inurl:backup",
+        "site:{TARGET} filetype:bak inurl:backup",
+        "site:{TARGET} intitle:\"index of\" \"backup.zip\"",
+        "site:{TARGET} inurl:dump.sql"
+      ],
+      "operators_out": [
+        "{TARGET} \".zip\" \".rar\" \".7z\"",
+        "{TARGET} \".sql.gz\" \".sql.zip\"",
+        "{TARGET} \"backup\"",
+        "{TARGET} \"index of\" \"backup.zip\"",
+        "{TARGET} \"dump.sql\""
+      ]
+    },
+    "cameras": {
+      "description": "Exposed IP camera / webcam viewer interfaces on {TARGET}",
+      "operators": [
+        "site:{TARGET} intitle:\"webcamXP\"",
+        "site:{TARGET} intitle:\"Live View / - AXIS\"",
+        "site:{TARGET} intitle:\"网络摄像机\"",
+        "site:{TARGET} inurl:\"view/view.shtml\"",
+        "site:{TARGET} intitle:\"IP Camera Viewer\""
+      ],
+      "operators_out": [
+        "{TARGET} \"webcamXP\"",
+        "{TARGET} \"Live View / - AXIS\"",
+        "{TARGET} \"网络摄像机\"",
+        "{TARGET} \"view/view.shtml\"",
+        "{TARGET} \"IP Camera Viewer\""
+      ]
+    },
+    "cloud": {
+      "description": "Cloud storage buckets and object endpoints referencing {TARGET}",
+      "operators": [
+        "site:s3.amazonaws.com \"{TARGET}\"",
+        "site:storage.googleapis.com \"{TARGET}\"",
+        "site:blob.core.windows.net \"{TARGET}\"",
+        "\"{TARGET}\" inurl:s3.amazonaws.com",
+        "\"{TARGET}\" inurl:storage.googleapis.com",
+        "\"{TARGET}\" ext:xml inurl:s3.amazonaws.com",
+        "site:{TARGET} inurl:\"amazonaws.com\""
+      ],
+      "operators_out": [
+        "{TARGET} \"s3.amazonaws.com\"",
+        "{TARGET} \"storage.googleapis.com\"",
+        "{TARGET} \"blob.core.windows.net\""
+      ]
+    },
+    "config": {
+      "description": "Configuration and environment files that leak secrets on {TARGET}",
+      "operators": [
+        "site:{TARGET} ext:env \"DB_PASSWORD\"",
+        "site:{TARGET} ext:env",
+        "site:{TARGET} ext:ini",
+        "site:{TARGET} ext:yml | ext:yaml",
+        "site:{TARGET} ext:json inurl:config",
+        "site:{TARGET} ext:xml inurl:config",
+        "site:{TARGET} ext:conf",
+        "site:{TARGET} filetype:env \"APP_KEY\"",
+        "site:{TARGET} inurl:wp-config.php",
+        "site:{TARGET} inurl:web.config",
+        "site:{TARGET} inurl:.htpasswd",
+        "site:{TARGET} inurl:docker-compose.yml"
+      ],
+      "operators_out": [
+        "{TARGET} \".env\" \"DB_PASSWORD\"",
+        "{TARGET} \".env\"",
+        "{TARGET} \".ini\"",
+        "{TARGET} \".yml\" \".yaml\"",
+        "{TARGET} \".conf\"",
+        "{TARGET} \"wp-config.php\"",
+        "{TARGET} \"web.config\"",
+        "{TARGET} \".htpasswd\"",
+        "{TARGET} \"docker-compose.yml\""
+      ]
+    },
+    "docs": {
+      "description": "Sensitive documents indexed under {TARGET}",
+      "operators": [
+        "site:{TARGET} filetype:pdf \"confidential\"",
+        "site:{TARGET} filetype:xls | filetype:xlsx \"password\"",
+        "site:{TARGET} filetype:doc | filetype:docx \"internal use only\"",
+        "site:{TARGET} filetype:pdf inurl:contract",
+        "site:{TARGET} filetype:csv \"email\"",
+        "site:{TARGET} filetype:sql",
+        "site:{TARGET} filetype:bak"
+      ],
+      "operators_out": [
+        "{TARGET} \".pdf\" \"confidential\"",
+        "{TARGET} \".xls\" \".xlsx\" \"password\"",
+        "{TARGET} \".doc\" \".docx\" \"internal use only\"",
+        "{TARGET} \".pdf\" \"contract\"",
+        "{TARGET} \".csv\" \"email\"",
+        "{TARGET} \".sql\""
+      ]
+    },
+    "errors": {
+      "description": "Application errors and stack traces leaking internal detail on {TARGET}",
+      "operators": [
+        "site:{TARGET} \"SQL syntax\" \"error\"",
+        "site:{TARGET} \"Warning: mysql_\"",
+        "site:{TARGET} \"unhandled exception\"",
+        "site:{TARGET} \"stack trace\" \"at \"",
+        "site:{TARGET} \"Fatal error\" \"on line\"",
+        "site:{TARGET} intext:\"ORA-01756\"",
+        "site:{TARGET} intext:\"Microsoft OLE DB Provider for SQL Server\"",
+        "site:{TARGET} \"Whitelabel Error Page\"",
+        "site:{TARGET} intitle:\"500 Internal Server Error\""
+      ],
+      "operators_out": [
+        "{TARGET} \"SQL syntax\" \"error\"",
+        "{TARGET} \"Warning: mysql_\"",
+        "{TARGET} \"unhandled exception\"",
+        "{TARGET} \"stack trace\"",
+        "{TARGET} \"Fatal error\" \"on line\"",
+        "{TARGET} \"ORA-01756\"",
+        "{TARGET} \"Microsoft OLE DB Provider for SQL Server\"",
+        "{TARGET} \"Whitelabel Error Page\"",
+        "{TARGET} \"500 Internal Server Error\""
+      ]
+    },
+    "files": {
+      "description": "Exposed file/directory listings and stray sensitive files on {TARGET}",
+      "operators": [
+        "site:{TARGET} intitle:\"index of /\"",
+        "site:{TARGET} intitle:\"index of\" \"parent directory\"",
+        "site:{TARGET} intitle:\"index of\" \"backup\"",
+        "site:{TARGET} intitle:\"index of\" \"database\"",
+        "site:{TARGET} intitle:\"index of\" \"credentials\"",
+        "site:{TARGET} intitle:\"index of\" \"wp-content\"",
+        "site:{TARGET} inurl:\"/uploads/\" intitle:\"index of\"",
+        "site:{TARGET} inurl:\"/files/\" intitle:\"index of\"",
+        "site:{TARGET} filetype:log",
+        "site:{TARGET} filetype:log inurl:\"error\""
+      ],
+      "operators_out": [
+        "{TARGET} \"index of /\"",
+        "{TARGET} \"index of\" \"parent directory\"",
+        "{TARGET} \"index of\" \"database\"",
+        "{TARGET} \"index of\" \"credentials\"",
+        "{TARGET} \"/uploads/\" \"index of\"",
+        "{TARGET} \".log\""
+      ]
+    },
+    "git_exposure": {
+      "description": "Exposed version-control and dependency metadata on {TARGET}",
+      "operators": [
+        "site:{TARGET} inurl:\".git\" -github.com",
+        "site:{TARGET} inurl:\".git/config\"",
+        "site:{TARGET} inurl:\".svn/entries\"",
+        "site:{TARGET} inurl:\".DS_Store\"",
+        "site:{TARGET} inurl:composer.json",
+        "site:{TARGET} inurl:package.json",
+        "site:{TARGET} inurl:.gitlab-ci.yml"
+      ],
+      "operators_out": [
+        "{TARGET} \".git\"",
+        "{TARGET} \".git/config\"",
+        "{TARGET} \".svn/entries\"",
+        "{TARGET} \".DS_Store\"",
+        "{TARGET} \"composer.json\"",
+        "{TARGET} \"package.json\"",
+        "{TARGET} \".gitlab-ci.yml\""
+      ]
+    },
+    "panels": {
+      "description": "Admin, login and management panels on {TARGET}",
+      "operators": [
+        "site:{TARGET} inurl:admin",
+        "site:{TARGET} inurl:login",
+        "site:{TARGET} intitle:\"admin login\"",
+        "site:{TARGET} intitle:\"login\" inurl:panel",
+        "site:{TARGET} inurl:phpmyadmin",
+        "site:{TARGET} inurl:adminer.php",
+        "site:{TARGET} intitle:\"dashboard\" inurl:admin",
+        "site:{TARGET} inurl:wp-admin",
+        "site:{TARGET} inurl:cpanel",
+        "site:{TARGET} intitle:\"control panel\""
+      ],
+      "operators_out": [
+        "{TARGET} \"admin login\"",
+        "{TARGET} \"phpmyadmin\"",
+        "{TARGET} \"adminer.php\"",
+        "{TARGET} \"wp-admin\"",
+        "{TARGET} \"cpanel\"",
+        "{TARGET} \"control panel\""
+      ]
+    },
+    "remote_access": {
+      "description": "Remote-access and infrastructure panels exposed on {TARGET}",
+      "operators": [
+        "site:{TARGET} intitle:\"RDP\" inurl:login",
+        "site:{TARGET} intitle:\"VPN\" inurl:login",
+        "site:{TARGET} intitle:\"Citrix Gateway\"",
+        "site:{TARGET} intitle:\"Remote Desktop Web Connection\"",
+        "site:{TARGET} inurl:owa \"Outlook\"",
+        "site:{TARGET} intitle:\"Jenkins\" inurl:login",
+        "site:{TARGET} intitle:\"GitLab\" inurl:sign_in"
+      ],
+      "operators_out": [
+        "{TARGET} \"RDP\" \"login\"",
+        "{TARGET} \"VPN\" \"login\"",
+        "{TARGET} \"Citrix Gateway\"",
+        "{TARGET} \"Remote Desktop Web Connection\"",
+        "{TARGET} \"owa\" \"Outlook\"",
+        "{TARGET} \"Jenkins\" \"login\"",
+        "{TARGET} \"GitLab\" \"sign_in\""
+      ]
+    }
+  }
+}

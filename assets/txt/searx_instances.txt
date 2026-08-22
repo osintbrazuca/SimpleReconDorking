@@ -1,0 +1,9 @@
+# Public SearXNG instances tried in order; the first that answers JSON wins.
+# Curated from https://searx.space (uptime varies - public instances rotate).
+# One entry per line, base URL only (no trailing /search).
+https://searx.be
+https://priv.au
+https://search.inetol.net
+https://search.rhscz.eu
+https://opnxng.com
+https://searx.tiekoetter.com

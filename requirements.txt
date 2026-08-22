@@ -1,0 +1,4 @@
+# SimpleReconDorking v1 - required runtime dependencies (Python 3.10+)
+# Everything else (sqlite3, asyncio, re, json, ...) is provided by Python.
+# The socks extra installs SOCKS proxy support used by --proxy socks5://.
+httpx[socks]>=0.28.1

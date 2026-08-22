@@ -1,0 +1,32 @@
+# Public Google CSE (Custom Search Engine) IDs used by sources/passive/googlecse.py
+# Origin: MrCl0wnLab/string-x (asset/txt/google_cse_id.txt).
+# Each ID is a third-party public CSE with its own index/scope, so rotating
+# between them yields different results for the same query - and none of them
+# requires an API key.
+# Only IDs verified as live were kept; dead ones are skipped silently at runtime.
+000905274576528531678:hvqlnmyn2is
+003917828085772992913:gmoeray5sa8
+005911257635119896548:iiolgmwf2se
+006688160405527839966:yhpefuwybre
+006748068166572874491:55ez0c3j3ey
+007843865286850066037:3ajwn2jlweq
+007843865286850066037:b0heuatvay8
+009462381166450434430:0aq_5piun68
+010479943387663786936:wjwf2xkhfmq
+012873187529719969291:yexdhbzntue
+012984904789461885316:oy3-mu17hxk
+013269018370076798483:wdba3dlnxqm
+018033044562278214682:oxcpaqr8gke
+009462381166450434430:frzo6adfjso
+013879456795131126190:lft7oyifbd0
+009081794347989224031:rrizk45lqzi
+006262502083096379805:t6_vdxxr_xy
+001394533911082033616:3rmgu_htqw4
+partner-pub-2353536094017743:1302913524
+005797772976587943970:i7q6z1kjm1w
+013991603413798772546:zu7epjqvunu
+018413290510798844940:k69bxcfofe0
+partner-pub-9033736287770724:5710551291
+002717229081227036262:e-izaongzem
+011545203169215625696:-yygy0imnne
+011507650028433360591:mw4qttke1oe

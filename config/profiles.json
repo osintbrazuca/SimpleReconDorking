@@ -1,0 +1,89 @@
+{
+    "fast": {
+        "description": "Keyless engines that reliably answer queries: googlecse, yahoo, duckduckgo, seznam, aol",
+        "sources": [
+            "googlecse",
+            "yahoo",
+            "duckduckgo",
+            "seznam",
+            "aol"
+        ],
+        "options": {}
+    },
+    "web": {
+        "description": "Every general web-search engine (best-effort ones included)",
+        "sources": [
+            "google",
+            "googlecse",
+            "yahoo",
+            "bing",
+            "duckduckgo",
+            "brave",
+            "marginalia",
+            "startpage",
+            "searx",
+            "seznam",
+            "naver",
+            "daum",
+            "yahoojp",
+            "yandex",
+            "baidu",
+            "aol"
+        ],
+        "options": {}
+    },
+    "keyless": {
+        "description": "Every source that needs no API key",
+        "sources": [
+            "google",
+            "googlecse",
+            "yahoo",
+            "bing",
+            "duckduckgo",
+            "marginalia",
+            "startpage",
+            "searx",
+            "grep_app",
+            "seznam",
+            "naver",
+            "daum",
+            "yahoojp",
+            "yandex",
+            "baidu",
+            "aol"
+        ],
+        "options": {}
+    },
+    "code": {
+        "description": "Code search - URLs and endpoints hardcoded in public repositories",
+        "sources": [
+            "grep_app",
+            "github"
+        ],
+        "options": {}
+    },
+    "intel": {
+        "description": "Source-code markup search and leak/paste corpora (both need keys)",
+        "sources": [
+            "publicwww",
+            "intelx"
+        ],
+        "options": {}
+    },
+    "browser": {
+        "description": "Headless browser - Mojeek's ALTCHA, Ecosia's Turnstile, Swisscows' SPA, So.com's real click, Dogpile's WAF (needs requirements-browser.txt)",
+        "sources": [
+            "mojeek",
+            "ecosia",
+            "swisscows",
+            "so",
+            "dogpile"
+        ],
+        "options": {}
+    },
+    "full": {
+        "description": "Every registered source, keyed or not",
+        "sources": "all",
+        "options": {}
+    }
+}

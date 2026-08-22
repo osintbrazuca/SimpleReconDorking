@@ -1,0 +1,8 @@
+# Optional dependency for the `mojeek` engine (headless-browser ALTCHA bypass).
+# Not required for any other part of SimpleReconDorking - without it, mojeek
+# self-disables and everything else runs normally.
+#
+# Two-step install (the second command downloads the browser binary, ~150MB):
+#   pip install -r requirements-browser.txt
+#   playwright install chromium
+playwright>=1.40.0

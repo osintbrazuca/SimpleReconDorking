@@ -1,0 +1,80 @@
+# Domains belonging to the search engines themselves, filtered out by
+# _search_common.drop_engine_chrome().
+# Scraping a result page also scoops up its navigation; without this, one Bing query
+# alone contributed 61 junk r.bing.com links to the external-URLs channel.
+# URLs inside the target's own scope are NEVER dropped, so scanning one of these
+# domains still works.
+bing.com
+microsoft.com
+msn.com
+live.com
+outlook.com
+microsoftonline.com
+office.com
+skype.com
+windows.com
+xbox.com
+google.com
+googleusercontent.com
+gstatic.com
+googleadservices.com
+googlesyndication.com
+youtube.com
+blogger.com
+
+# mojeek / ecosia / swisscows / so.com / dogpile - their own results always
+# point off-domain, so this is safe here (unlike jusbrasil, whose real
+# results live on its own domain)
+mojeek.com
+ecosia.org
+swisscows.com
+flocdn.com
+teleguard.com
+so.com
+360.cn
+360kan.com
+haosou.com
+hao.360.com
+dogpile.com
+system1.com
+yahoo.com
+yimg.com
+oath.com
+aol.com
+w3.org
+schema.org
+
+# yahoojp
+yahoo.co.jp
+yimg.jp
+lycorp.co.jp
+lycbiz.com
+
+# naver
+naver.com
+naver.net
+pstatic.net
+navercorp.com
+
+# daum (Kakao ecosystem - the portal's own sub-services, not organic results)
+daum.net
+daumcdn.net
+daumcorp.com
+kakao.com
+kakaocorp.com
+
+# seznam
+seznam.cz
+szn.cz
+
+# yandex (best-effort engine)
+yandex.com
+yandex.ru
+yastatic.net
+ya.ru
+
+# baidu (best-effort engine)
+baidu.com
+bdstatic.com
+bdimg.com
+baidu.cn

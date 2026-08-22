@@ -1,0 +1,16 @@
+.git
+.gitignore
+.dockerignore
+docker/
+*.md
+__pycache__/
+*.py[cod]
+.pytest_cache/
+config/api_keys.json
+config/system.db
+config/system.db-wal
+config/system.db-shm
+*.db
+*.log
+.claude/
+CLAUDE.md

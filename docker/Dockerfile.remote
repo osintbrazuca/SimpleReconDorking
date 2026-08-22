@@ -1,0 +1,45 @@
+# SimpleReconDorking v1 - self-contained image (clones the source from GitHub)
+#
+# No local checkout needed: this Dockerfile downloads the project itself, so the
+# build context is irrelevant. Build it any of these ways:
+#   docker build -t docker/simplerecondorking -f docker/Dockerfile.remote .
+#   docker build -t docker/simplerecondorking - < docker/Dockerfile.remote
+#   curl -sSL https://raw.githubusercontent.com/osintbrazuca/SimpleReconDorking/master/docker/Dockerfile.remote \
+#     | docker build -t docker/simplerecondorking -
+#
+# Pin a branch/tag or a fork:
+#   --build-arg REF=v1.0.0   --build-arg REPO_URL=https://github.com/you/fork.git
+#
+# Run (identical to the local image):
+#   docker run --rm docker/simplerecondorking -d 'site:target.com ext:sql'
+FROM python:3.12-slim
+
+ARG REPO_URL=https://github.com/osintbrazuca/SimpleReconDorking.git
+ARG REF=master
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+WORKDIR /app
+
+# Fetch the source from GitHub. git is only needed at build time; ca-certificates
+# is installed explicitly so it survives the autoremove and stays for runtime HTTPS.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends git ca-certificates \
+    && git clone --depth 1 --branch "${REF}" "${REPO_URL}" /app \
+    && apt-get purge -y git \
+    && apt-get autoremove -y \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Run as a non-root user; config/ must stay writable for config/system.db.
+RUN useradd --create-home --uid 1000 recon \
+    && chown -R recon:recon /app
+USER recon
+
+# `docker run ... -d 'site:target.com ext:sql'`  ->  `python simplerecondorking.py -d 'site:target.com ext:sql'`
+ENTRYPOINT ["python", "simplerecondorking.py"]
+CMD ["--help"]

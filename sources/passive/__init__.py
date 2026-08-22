@@ -1,0 +1,1 @@
+"""Passive source implementations."""

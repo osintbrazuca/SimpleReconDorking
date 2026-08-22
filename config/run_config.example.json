@@ -1,0 +1,52 @@
+{
+    "_comment": "SimpleReconDorking run-config preset. Copy this file, edit as needed, and pass with --config.",
+    "_note": "Keys set to null are ignored (CLI/argparse defaults apply). CLI flags always override config values.",
+
+    "output": "json",
+    "outfile": "results.json",
+
+    "profile": "web",
+    "sources": null,
+    "category": null,
+    "exclude": null,
+
+    "filter_host": null,
+    "filter_string": null,
+    "filter_regex": null,
+    "filter_file": null,
+
+    "threads": 20,
+    "timeout": 30,
+    "rate_limit": 3,
+    "pages": 3,
+
+    "_proxy_note": "proxy accepts a single string or a list; proxy_file adds a file on top of it.",
+    "proxy": null,
+    "proxy_file": null,
+    "proxy_source": null,
+    "proxy_profile": null,
+    "proxy_rotate": "sticky",
+    "proxy_rotate_secs": 0,
+    "proxy_rotate_reqs": 0,
+    "proxy_rotate_status": null,
+    "proxy_rotate_body": null,
+    "proxy_rotate_regex": null,
+    "proxy_retries": 2,
+    "proxy_ban_after": 3,
+    "proxy_fallback_direct": false,
+
+    "user_agent": "SimpleReconDorking/1",
+    "ua_file": null,
+    "ua_source": null,
+    "ua_profile": null,
+
+    "header": null,
+    "header_file": null,
+    "header_source": null,
+    "header_profile": null,
+
+    "verbose": 0,
+    "quiet": false,
+    "no_banner": false,
+    "no_color": false
+}
