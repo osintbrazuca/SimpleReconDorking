@@ -109,6 +109,7 @@ class Ecosia(BaseSource):
                     )
                     page = await context.new_page()
 
+                    self._progress.note_request(_QUERY_URL.format(q=q))
                     await page.goto(
                         _QUERY_URL.format(q=q), wait_until='load', timeout=self.timeout * 1000
                     )
@@ -122,6 +123,7 @@ class Ecosia(BaseSource):
 
                     for page_no in range(1, self.pages):
                         try:
+                            self._progress.note_request(_PAGE_URL.format(q=q, page=page_no))
                             await page.goto(
                                 _PAGE_URL.format(q=q, page=page_no),
                                 wait_until='load',

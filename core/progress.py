@@ -26,6 +26,7 @@ from __future__ import annotations
 import shutil
 import sys
 import time
+from urllib.parse import urlparse
 
 import core.colors as colors
 
@@ -66,6 +67,24 @@ class Progress:
         self.done = 0
         self.urls = baseline
         self.current = ''
+        # Sub-task counters. 'done' only moves when a whole (source, dork)
+        # task finishes, which on a one-task run (searxbrowser walking 72
+        # instances) means the line never changes for minutes. These two do
+        # move, because every request reports itself - see note_request().
+        self.requests = 0
+        # Sub-task workload, so the BAR can move inside a long task. done/total
+        # alone cannot: a run with one (source, dork) task pinned at 0/1 leaves
+        # the bar at 0% for its entire duration, which is exactly the case that
+        # motivated this (searxbrowser walking dozens of instances). A task that
+        # knows its workload declares it with declare_units() and ticks
+        # note_unit(); tasks that do not simply leave the bar on done/total.
+        self._units_total = 0
+        self._units_done = 0
+        # A set, not a counter: a single-host source contributes 1 no matter
+        # how many pages it walks, while a multi-instance source (searx,
+        # searxbrowser) makes the number climb - which is exactly the
+        # information the line was missing.
+        self._hosts: set[str] = set()
         self._drawn = False
         self._last_render = 0.0
         self._stream = stream if stream is not None else sys.stderr
@@ -81,6 +100,44 @@ class Progress:
     # Line building
     # ------------------------------------------------------------------
 
+    def _pct(self) -> int:
+        """Percentage, counting partial progress of in-flight tasks.
+
+        Finished tasks weigh 1 each; declared sub-units add the fraction of
+        **one** further task on top. Deliberately one and not "every task still
+        pending": the declared units belong to whatever is running right now,
+        and scaling them across all remaining tasks made a single finished
+        task with a full unit pool read as 100% when it was 25% (caught by the
+        unit test). Understating is the safe direction for a progress bar.
+        """
+        if not self.total:
+            return 100
+        progress = float(self.done)
+        if self._units_total:
+            partial = min(1.0, self._units_done / self._units_total)
+            progress += partial * min(1, max(0, self.total - self.done))
+        return max(0, min(100, int(progress * 100 / self.total)))
+
+    def declare_units(self, n: int) -> None:
+        """A task announces how many sub-units of work it is about to do."""
+        if not self.enabled or n <= 0:
+            return
+        self._units_total += n
+        self._render()
+
+    def note_unit(self, n: int = 1) -> None:
+        """*n* declared sub-units finished."""
+        if not self.enabled:
+            return
+        self._units_done += n
+        if self._units_total and self._units_done >= self._units_total:
+            # Pool drained: clear it so the finished task leaves no residue
+            # that would be re-counted on top of the done/total it is about to
+            # bump. Whatever is still in flight re-declares as it goes.
+            self._units_total = 0
+            self._units_done = 0
+        self._render()
+
     def _bar(self, pct: int) -> str:
         filled = round(_BAR_WIDTH * pct / 100)
         return '[' + '#' * filled + '-' * (_BAR_WIDTH - filled) + ']'
@@ -94,13 +151,14 @@ class Progress:
         URLs found so far. The counters are the point of the feature, so they
         are the last thing dropped.
         """
-        pct = int(self.done * 100 / self.total) if self.total else 100
+        pct = self._pct()
         new = self.urls - self.baseline
         bar = self._bar(pct)
         runs = f'runs {self.done}/{self.total}'
         urls = f'urls {self.urls} (+{new} new)'
+        work = f'req {self.requests} | hosts {len(self._hosts)}'
 
-        base = f'[*] {bar} {pct:3d}% | {runs} | {urls}'
+        base = f'[*] {bar} {pct:3d}% | {runs} | {work} | {urls}'
         if self.current:
             candidate = f'{base} | now {self.current}'
             if len(candidate) <= width:
@@ -111,6 +169,7 @@ class Progress:
 
         for line in (
             base,                                              # drop the query
+            f'[*] {bar} {pct:3d}% | {runs} | {urls}',          # drop req/hosts
             f'[*] {pct:3d}% | {runs} | {urls}',                # drop the bar
             f'[*] {pct:3d}% | {self.done}/{self.total} | {self.urls} (+{new})',
         ):
@@ -156,6 +215,28 @@ class Progress:
         except Exception:
             self.enabled = False
         self._drawn = False
+
+    def note_request(self, url: str = '') -> None:
+        """One HTTP request (or browser navigation) is going out.
+
+        This is what keeps the line alive *inside* a long fetch(): done/total
+        cannot move until a whole task ends, so a run with a single task -
+        searxbrowser walking dozens of instances with a proof-of-work each -
+        would otherwise sit frozen for minutes. Re-rendering here is safe
+        because _render() still honours the _MIN_INTERVAL throttle, so many
+        concurrent requests do not become many writes.
+        """
+        if not self.enabled:
+            return
+        self.requests += 1
+        if url:
+            try:
+                host = urlparse(url).hostname
+            except Exception:
+                host = None
+            if host:
+                self._hosts.add(host)
+        self._render()
 
     def start(self, query: str) -> None:
         """A task began; show its dork so the line moves even on slow engines."""

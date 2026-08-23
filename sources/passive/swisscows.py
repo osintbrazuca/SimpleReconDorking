@@ -72,6 +72,7 @@ class Swisscows(BaseSource):
                     )
                     page = await context.new_page()
 
+                    self._progress.note_request(_QUERY_URL.format(q=q))
                     await page.goto(
                         _QUERY_URL.format(q=q), wait_until='load', timeout=self.timeout * 1000
                     )
@@ -82,6 +83,7 @@ class Swisscows(BaseSource):
                     for i in range(1, self.pages):
                         offset = i * _PAGE_SIZE
                         try:
+                            self._progress.note_request(_PAGE_URL.format(q=q, offset=offset))
                             await page.goto(
                                 _PAGE_URL.format(q=q, offset=offset),
                                 wait_until='load',

@@ -71,13 +71,26 @@
         "options": {}
     },
     "browser": {
-        "description": "Headless browser - Mojeek's ALTCHA, Ecosia's Turnstile, Swisscows' SPA, So.com's real click, Dogpile's WAF (needs requirements-browser.txt)",
+        "description": "Headless browser - Mojeek's ALTCHA, Ecosia's Turnstile, Swisscows' SPA, So.com's real click, Dogpile's WAF, SearXNG's Anubis PoW (needs requirements-browser.txt)",
         "sources": [
             "mojeek",
             "ecosia",
             "swisscows",
             "so",
-            "dogpile"
+            "dogpile",
+            "searxbrowser"
+        ],
+        "options": {}
+    },
+    "tor": {
+        "description": "Tor hidden-service indexes - onionsearch and tor66web are clearnet, the rest need a running Tor daemon (see --tor-proxy)",
+        "sources": [
+            "ahmia",
+            "torch",
+            "tor66",
+            "tordex",
+            "onionsearch",
+            "tor66web"
         ],
         "options": {}
     },

@@ -88,6 +88,22 @@ docker run --rm \
 
 A imagem **não** inclui o Playwright/Chromium (o mesmo binário de ~150MB que a instalação local trata como dependência opcional) - dentro do contêiner, as cinco fontes se autodesabilitam com uma mensagem em `-v 1`, igual ao comportamento sem `requirements-browser.txt` local. Todo o resto da ferramenta, incluindo as demais 20 fontes, funciona normalmente. Para usar `mojeek`/`ecosia`/`swisscows`/`so`/`dogpile`, rode a partir da instalação local em vez do Docker.
 
+## Tor (fontes darkweb)
+
+A imagem **não** inclui o daemon Tor. As fontes `ahmia`/`torch`/`tor66`/`tordex` precisam alcançar um SOCKS5 do Tor, e `127.0.0.1` dentro do contêiner é o próprio contêiner - não o host. Duas saídas:
+
+```bash
+# A) compartilhar a rede do host (o Tor do host passa a ser alcançável)
+docker run --rm --network host \
+  docker/simplerecondorking -d 'minhaempresa.com' --category darkweb
+
+# B) apontar explicitamente para o host (Docker Desktop no macOS/Windows)
+docker run --rm docker/simplerecondorking -d 'minhaempresa.com' \
+  --category darkweb --tor-proxy socks5h://host.docker.internal:9050
+```
+
+Sem isso as quatro apenas avisam que o Tor não está acessível e contribuem zero, sem derrubar a execução - mesmo comportamento das fontes de navegador sem o Playwright.
+
 ## Proxy
 
 As flags de proxy funcionam normalmente no contêiner - inclusive `--proxy-file`, desde que o arquivo esteja montado:

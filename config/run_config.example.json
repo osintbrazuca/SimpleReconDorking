@@ -35,6 +35,9 @@
     "proxy_ban_after": 3,
     "proxy_fallback_direct": false,
 
+    "_tor_note": "tor_proxy is used ONLY by the darkweb sources (ahmia, torch, tor66, tordex); keep the socks5h scheme so Tor resolves .onion.",
+    "tor_proxy": "socks5h://127.0.0.1:9050",
+
     "user_agent": "SimpleReconDorking/1",
     "ua_file": null,
     "ua_source": null,

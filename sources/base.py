@@ -113,12 +113,23 @@ class BaseSource(ABC):
     API_TOKEN_IS_REQUIREMENT: bool = False
 
     # Grouping shown by --list-sources and selectable via --category:
-    #   'web'    -> a general web index (google, yahoo, bing, duckduckgo...)
-    #   'code'   -> source code in public repositories (github, grep_app)
-    #   'source' -> the markup/JS of indexed pages (publicwww)
-    #   'legal'  -> public judicial/legal-process records (jusbrasil)
-    #   'leak'   -> leak/paste/dump corpora (intelx)
+    #   'web'     -> a general web index (google, yahoo, bing, duckduckgo...)
+    #   'code'    -> source code in public repositories (github, grep_app)
+    #   'source'  -> the markup/JS of indexed pages (publicwww)
+    #   'legal'   -> public judicial/legal-process records (jusbrasil)
+    #   'leak'    -> leak/paste/dump corpora (intelx)
+    #   'darkweb' -> Tor hidden-service indexes (ahmia, torch, tor66, tordex)
     CATEGORY: str = 'web'
+
+    # True for sources that can ONLY be reached through Tor, because a .onion
+    # address has no public DNS record. Engine hands these the --tor-proxy
+    # value via the `proxy=` constructor kwarg and no pool at all, so they are
+    # exempt from --proxy/--proxy-rotate and the two families coexist in one
+    # run. Passing it through the constructor rather than _make_client(proxy=)
+    # is deliberate: _client_kwargs drops the 'proxy' key, so a client rebuilt
+    # mid-fetch would silently lose Tor and leak the request to the clearnet,
+    # whereas _rebuild_client() re-reads self.proxy and keeps it.
+    REQUIRES_TOR: bool = False
 
     # False when the index cannot parse search operators. The source still runs;
     # BaseSource.query_for() hands it Dork.plain_terms() instead, and the source
@@ -320,6 +331,14 @@ class BaseSource(ABC):
         return await self._request('POST', client, url, **kwargs)
 
     async def _issue(self, method: str, client, url: str, **kwargs):
+        # The single point every httpx request in the tool passes through, so
+        # counting here covers all 27 non-browser sources and their pagination
+        # without touching a single source module. Deliberately here and not in
+        # _get/_post: _issue is what actually hits the wire, so a proxy
+        # rotation that re-issues the request counts as the extra traffic it
+        # really is. The 6 Playwright sources bypass this entirely (page.goto)
+        # and report themselves.
+        self._progress.note_request(url)
         resp = await (
             client.post(url, **kwargs) if method == 'POST' else client.get(url, **kwargs)
         )

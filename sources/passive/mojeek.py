@@ -137,6 +137,7 @@ class Mojeek(BaseSource):
                     )
                     page = await context.new_page()
 
+                    self._progress.note_request(_QUERY_URL.format(q=q))
                     chv = await _solve_challenge(
                         page, _QUERY_URL.format(q=q), self.timeout * 1000
                     )
@@ -152,6 +153,7 @@ class Mojeek(BaseSource):
                         url = _PAGE_URL.format(q=q, offset=offset)
                         if chv:
                             url += f'&chv={chv}'
+                        self._progress.note_request(url)
                         try:
                             await page.goto(url, wait_until='load', timeout=self.timeout * 1000)
                         except Exception as e:

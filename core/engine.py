@@ -244,7 +244,6 @@ class Engine:
         url_sources: dict, url_dorks: dict,
     ) -> None:
         try:
-            self._progress.start(dork.query)
             pool = getattr(source, '_pool', None)
             if pool is not None and pool.exhausted and not pool.fallback_direct:
                 # The pool died in an earlier task. Skip rather than dispatch:
@@ -254,6 +253,11 @@ class Engine:
                 counts.setdefault(name, 0)
                 return
             async with gate:
+                # Inside the semaphore, not before it: gather() dispatches
+                # every task at once, so announcing the dork at dispatch time
+                # left 'now' showing the LAST task in the queue rather than
+                # one actually running.
+                self._progress.start(dork.query)
                 found = await source.fetch(dork)
             new_items = dedup.update(found)
             counts[name] = counts.get(name, 0) + len(new_items)
@@ -353,6 +357,9 @@ class Engine:
             return headers_dict
 
         pages: int = max(1, int(getattr(self.args, 'pages', 2) or 2))
+        tor_proxy: str = (
+            getattr(self.args, 'tor_proxy', None) or 'socks5h://127.0.0.1:9050'
+        )
 
         filter_host: str | None = getattr(self.args, 'filter_host', None)
         filter_strings = [
@@ -375,12 +382,19 @@ class Engine:
         system_db.log_command(' '.join(sys.argv), targets=getattr(self.args, 'target', '') or '')
 
         def _make_source(name: str, cls):
+            # A Tor-only source gets --tor-proxy through the constructor and
+            # no pool: .onion has no public DNS, so the clearnet pool is not a
+            # substitute, and the two families are meant to coexist in one run
+            # (--proxy keeps governing the clearnet sources only).
+            if getattr(cls, 'REQUIRES_TOR', False):
+                routing = {'proxy': tor_proxy, 'proxy_pool': None}
+            else:
+                routing = {'proxy': None, 'proxy_pool': (pool if _wants_proxy(name) else None)}
             return cls(
                 timeout=self.args.timeout,
                 rate_limit=rate_limit,
                 verbose=self.verbose,
-                proxy=None,
-                proxy_pool=(pool if _wants_proxy(name) else None),
+                **routing,
                 user_agent=_ua_for(name),
                 pages=pages,
                 filter_host=filter_host,

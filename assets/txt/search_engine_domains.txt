@@ -78,3 +78,13 @@ baidu.com
 bdstatic.com
 bdimg.com
 baidu.cn
+
+# Tor hidden-service indexes (darkweb sources). Each of these renders its own
+# navigation as absolute onion links - tor66 in particular emits its home,
+# /about, /fresh, /random and a /serviceinfo/ link per hit. Their real results
+# live on OTHER onion domains, which is the condition this file requires
+# before an entry may be added.
+juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion
+torchdeedp3i2jigzjdmfpn5ttjhthh5wbmda2rr3jvqjg5p77c54dqd.onion
+tor66sewebgixwhcqfnp5inzp5x5uohhdy3kvtnyfxc2e5mxiuh34iid.onion
+tordexu73joywapk2txdr54jed4imqledpcvcuf75qsas2gwdgksvnyd.onion

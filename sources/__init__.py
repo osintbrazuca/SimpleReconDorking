@@ -37,7 +37,7 @@ ACTIVE_SOURCES: dict = _load_package(sources.active)
 SOURCES: dict = {**PASSIVE_SOURCES, **ACTIVE_SOURCES}
 
 # Order matters for display only: keyless web indexes first, paid/niche last.
-CATEGORY_ORDER = ('web', 'code', 'source', 'legal', 'leak')
+CATEGORY_ORDER = ('web', 'code', 'source', 'legal', 'leak', 'darkweb')
 
 
 def by_category() -> dict:

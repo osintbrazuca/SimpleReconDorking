@@ -59,6 +59,7 @@ _PARSER_DEFAULTS: dict[str, object] = {
     'proxy_retries': 2,
     'proxy_ban_after': 3,
     'proxy_fallback_direct': False,
+    'tor_proxy': 'socks5h://127.0.0.1:9050',
     'user_agent': 'SimpleReconDorking/1',
     'ua_file': None,
     'ua_source': None,

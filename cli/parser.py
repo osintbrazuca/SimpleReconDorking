@@ -426,6 +426,16 @@ def build_parser() -> argparse.ArgumentParser:
              'Adds to whatever --proxy already contributed.',
     )
     net_group.add_argument(
+        '--tor-proxy',
+        metavar='URL',
+        default='socks5h://127.0.0.1:9050',
+        help='SOCKS5 endpoint of the local Tor daemon, used by the darkweb sources '
+             '(ahmia, torch, tor66, tordex) and nothing else (default: '
+             'socks5h://127.0.0.1:9050). Keep the socks5h scheme: .onion has no public '
+             'DNS, so the hostname must be resolved by Tor, not locally. These sources '
+             'never use the --proxy pool, so both can be set in one run.',
+    )
+    net_group.add_argument(
         '--proxy-source', metavar='LIST',
         help='Restrict the proxy pool to these sources (comma-separated names). '
              'Unset: every source uses the pool. Combines with --proxy-profile as AND.',
@@ -744,6 +754,21 @@ _EXAMPLES: list[tuple[str, list[str]]] = [
     ]),
     ('Piping into nuclei (vulnerability scanning)', [
         'python simplerecondorking.py -t target.com --dork-category files --no-banner | httpx -silent | nuclei -t exposures/ -silent',
+    ]),
+    ('Dark web / Tor (.onion indexes)', [
+        '# needs a running Tor daemon; --tor-proxy defaults to socks5h://127.0.0.1:9050',
+        'python simplerecondorking.py -d \'minhaempresa.com\' --category darkweb',
+        'python simplerecondorking.py -d \'minhaempresa.com\' --profile tor -v 1',
+        '# single engine, or a non-default Tor port (Tor Browser uses 9150)',
+        'python simplerecondorking.py -d \'vazamento\' --sources ahmia',
+        'python simplerecondorking.py -d \'vazamento\' --category darkweb --tor-proxy socks5h://127.0.0.1:9150',
+        '# Tor and a clearnet proxy coexist: --proxy never touches the darkweb sources',
+        'python simplerecondorking.py -d \'x\' --sources ahmia,yahoo --proxy http://a:8080',
+        '# no Tor daemon at all? the two clearnet ones still answer',
+        'python simplerecondorking.py -d \'minhaempresa.com\' --sources tor66web,onionsearch',
+        '# onionsearch is clearnet (no Tor needed) but Cloudflare-gated; if it 403s,',
+        '# send just that one through Tor - it is a normal --proxy pool participant',
+        'python simplerecondorking.py -d \'gov.br\' --sources onionsearch \\\n       --proxy socks5h://127.0.0.1:9050 --proxy-source onionsearch -v 1',
     ]),
     ('Proxy pool & rotation', [
         'python simplerecondorking.py -d \'site:target.com\' --proxy socks5://127.0.0.1:9050',

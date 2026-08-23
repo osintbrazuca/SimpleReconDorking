@@ -57,6 +57,7 @@ Twitter:  https://twitter.com/MrCl0wnLab
 - [Filtros](#filtros)
 - [Paginação e rate limiting](#paginação-e-rate-limiting)
 - [Proxy](#proxy)
+- [Dark web / Tor (.onion)](#dark-web--tor-onion)
 - [User-Agent](#user-agent)
 - [Headers](#headers)
 - [Mapa de dorks: grafo JSON e visualização HTML](#mapa-de-dorks-grafo-json-e-visualização-html)
@@ -296,7 +297,8 @@ Toda fonte recebe a mesma dork e devolve URLs; a diferença é o quanto cada uma
 | `startpage` | Não | Resultados do Google via proxy de privacidade; **melhor esforço**, scraping |
 | `brave` | Sim | API oficial da Brave Search, suporte completo a operadores |
 | `marginalia` | Não | Índice independente e não comercial; **free-text only** |
-| `searx` | Não | Metabusca federada via instâncias públicas SearXNG (JSON API); disponibilidade variável |
+| `searx` | Não | Metabusca federada SearXNG sobre ~72 instâncias públicas (consulta JSON e HTML e une os dois); alto rendimento quando uma instância responde, mas disponibilidade muito variável |
+| `searxbrowser` | Não | As mesmas instâncias SearXNG, mas em Chromium headless: resolve os desafios JS (Anubis) que bloqueiam o `searx`. Lento, exige Playwright |
 | `seznam` | Não | Seznam.cz - fonte dominante na República Tcheca, índice próprio, paginação confirmada |
 | `naver` | Não | Naver - fonte dominante na Coreia do Sul (~55-60% do mercado), índice próprio, página única |
 | `daum` | Não | Daum (Kakao) - 2ª fonte coreana, índice próprio, página única |
@@ -526,6 +528,96 @@ python simplerecondorking.py -t target.com --dork-category files \
 **Fontes de navegador não rotacionam no meio.** O Playwright fixa o proxy no launch, então `mojeek`, `ecosia`, `swisscows`, `so` e `dogpile` recebem **um proxy por fetch**. Não é só custo: o `psid` do `so` e o token `chv` do `mojeek` estão ligados ao IP que os obteve, então trocar no meio corromperia o resultado. Consequência contra-intuitiva: `--proxy-rotate-status 403` **não resgata** o `dogpile`, que é justo quem mais devolve 403. O que essas cinco fazem é reportar o bloqueio ao pool, então o `--proxy-ban-after` retira o proxy queimado para as tarefas seguintes.
 
 **Duas fontes fixam um proxy por fetch de propósito.** `googlecse` busca o `cse_token` num IP e o gasta na chamada seguinte - trocar no meio produziria o 403 que se queria evitar. `intelx` abre um job de busca cobrado no servidor, e repetir a requisição cobraria a cota duas vezes. Ambas usam proxy normalmente, só não rotacionam dentro da mesma execução.
+
+---
+
+## Dark web / Tor (.onion)
+
+Seis fontes de serviços ocultos entram no catálogo na categoria `darkweb`:
+
+| Fonte | Observação (tudo verificado ao vivo) |
+|---|---|
+| `ahmia` | Único do grupo que aplica blacklist de material abusivo; código aberto. Sem paginação — devolve o conjunto inteiro numa resposta |
+| `torch` | Índice antigo e amplo, sem filtro. **Não pagina**: `--pages` é ignorado de propósito |
+| `tor66` | Pagina de verdade; também traz um diretório de serviços novos |
+| `tordex` | O de maior cobertura nos testes (175 links contra 68 do torch), pagina de verdade |
+| `onionsearch` | **Não precisa de Tor** - indexa serviços ocultos mas é consultado por HTTPS comum. Pagina de verdade. Protegido por Cloudflare (veja abaixo) |
+| `tor66web` | **Não precisa de Tor** - o mesmo índice do `tor66`, pelo host clearnet `tor66.org`. Mais raso (15 contra 33 links na mesma query), mas responde sem daemon nenhum |
+
+Duas delas dispensam Tor, e por motivos diferentes.
+
+O **`tor66web`** consulta o mesmo índice do `tor66` pelo host clearnet. Vale saber a diferença medida na mesma query:
+
+| Endpoint | Do clearnet | Via Tor |
+|---|---|---|
+| `tor66` (`.onion`) | inalcançável (não há DNS) | **33 links** |
+| `tor66web` (`tor66.org`) | **15 links** | 0 - devolve a home |
+
+Ou seja: com Tor disponível o `tor66` rende mais que o dobro; sem Tor, o `tor66web` é o que ainda responde. Rodar os dois juntos é válido e a deduplicação global cuida da sobreposição.
+
+> [!WARNING]
+> **Não mande o `tor66web` pelo Tor.** Diferente do `onionsearch`, o `tor66.org` responde a um nó de saída com HTTP 200 e a própria home — zero resultados, sem erro, nada detectável. Passar `--proxy socks5h://...` nele gasta requisição e não ganha nada; para sair por Tor use o `tor66`, que fala com o host `.onion` e rende mais.
+
+Já o `onionsearch` devolve URLs `.onion` mas é consultado em `onionsearchengine.com` por HTTPS comum, então **funciona sem Tor nenhum**. Em compensação está atrás do Cloudflare — de um IP de datacenter ele responde **403** (bloqueio de reputação de IP, não desafio resolvível; de um IP residencial costuma passar direto). Quando isso acontece, a saída é mandar só ele pelo Tor:
+
+```bash
+# só o onionsearch sai pelo Tor; funciona porque ele participa do pool
+# normal do --proxy (as outras quatro fontes darkweb nunca usam esse pool)
+python simplerecondorking.py -d 'gov.br' --sources onionsearch \
+  --proxy socks5h://127.0.0.1:9050 --proxy-source onionsearch -v 1
+```
+
+```
+[*] [proxy] 1/1 proxy(ies) alive, 0 rotation(s), 0 failure(s), mode=sticky
+[*] [onionsearch] page=1: 7 url(s)
+[*] [onionsearch] page=2: 4 url(s)
+[*] [onionsearch] "gov.br" +9 urls
+
+[+] Total unique URLs found: 9
+
+http://redditkrqlgqkdcybwfw37p43vn3tf3fdhdmnqqrsitf247puday35ad.onion/r/law
+http://kyb5vrehqma6gsmsrg4jpl5fl6quwhvakq4qui3kffebtpc5r4i54hid.onion/counterfeit-usd-banknotes-on-the-dark-web/index.html
+...
+```
+
+O `--proxy-source onionsearch` é o que impede o proxy de vazar para as outras fontes; com uma fonte só na execução ele é redundante, mas vira essencial ao misturar:
+
+```bash
+# onionsearch pelo Tor, yahoo direto, na mesma execução
+python simplerecondorking.py -d 'minhaempresa.com' --sources onionsearch,yahoo \
+  --proxy socks5h://127.0.0.1:9050 --proxy-source onionsearch
+```
+
+A própria ferramenta imprime essa dica ao levar 403.
+
+Um endereço `.onion` não tem registro DNS público — quem resolve é o próprio daemon Tor. Por isso essas fontes exigem SOCKS5 com **DNS remoto** (`socks5h://`, o equivalente ao `--socks5-hostname` do curl) e só funcionam com um Tor rodando localmente.
+
+```bash
+# confirme que o Tor está de pé
+curl --socks5-hostname localhost:9050 https://ifconfig.ca
+
+# o padrão já é socks5h://127.0.0.1:9050 - não precisa de flag
+python simplerecondorking.py -d 'minhaempresa.com' --category darkweb
+python simplerecondorking.py -d 'minhaempresa.com' --profile tor -v 1
+
+# porta diferente (o Tor Browser escuta na 9150, não na 9050)
+python simplerecondorking.py -d 'vazamento' --category darkweb \
+  --tor-proxy socks5h://127.0.0.1:9150
+```
+
+> [!IMPORTANT]
+> **`--tor-proxy` e `--proxy` são independentes e convivem numa execução só.** As fontes `darkweb` nunca usam o pool do `--proxy` (nem `--proxy-rotate`, nem `--proxy-ban-after`), e as fontes clearnet nunca usam o `--tor-proxy`. Rodar `--sources ahmia,yahoo --proxy http://a:8080` faz o ahmia sair por Tor e o yahoo pelo proxy, ao mesmo tempo.
+
+Sem Tor acessível, as quatro fontes `REQUIRES_TOR` se comportam como as fontes de navegador sem Playwright: contribuem zero, imprimem uma dica do que fazer e **não derrubam a execução**.
+
+```
+[*] [ahmia] Tor not reachable at socks5h://127.0.0.1:9050 - is the Tor daemon running?
+```
+
+Se aparecer aviso de SOCKS faltando, o extra do httpx não foi instalado: `pip install 'httpx[socks]'`.
+
+> [!NOTE]
+> As cinco são `free-text only` — a query vai como texto puro, sem `site:`/`ext:`. Foram verificadas só com busca textual, então marcar suporte a operadores seria chute. Vale o mesmo enquadramento do resto do projeto: o uso previsto é auditar exposição de ativos **sob sua responsabilidade** (credencial vazada, menção à sua marca), não descoberta de alvos.
 
 ---
 

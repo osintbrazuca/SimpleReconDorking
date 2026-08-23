@@ -89,6 +89,7 @@ class So(BaseSource):
                     )
                     page = await context.new_page()
 
+                    self._progress.note_request(_QUERY_URL.format(q=q))
                     await page.goto(
                         _QUERY_URL.format(q=q), wait_until='domcontentloaded', timeout=self.timeout * 1000
                     )
