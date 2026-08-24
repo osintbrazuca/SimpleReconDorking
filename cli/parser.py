@@ -383,10 +383,12 @@ def build_parser() -> argparse.ArgumentParser:
     # Verbosity
     parser.add_argument(
         '-v', '--verbose',
-        nargs='?', const=1, type=int, default=0,
+        nargs='?', const=1, type=int, default=1,
         metavar='LEVEL',
-        help='Verbose level (cumulative): 1=per-(source,dork) hit counts, 2=+HTTP codes, '
-             '3=+HTTP body +extras (filtered-out URLs in output and DB), 4=full debug+exceptions',
+        help='Verbose level (cumulative, default: 1): 1=per-(source,dork) hit counts, '
+             '2=+HTTP codes, 3=+HTTP body +extras (filtered-out URLs in output and DB), '
+             '4=full debug+exceptions. Use -v 0 for counters only, or -q/--no-banner '
+             'to silence process output entirely (what piping to httpx/nuclei wants).',
     )
     parser.add_argument(
         '-q', '--quiet', action='store_true', help='Quiet mode (results only)'
@@ -743,10 +745,14 @@ _EXAMPLES: list[tuple[str, list[str]]] = [
         'python simplerecondorking.py -d \'site:target.com\' --no-banner > urls.txt',
     ]),
     ('Debug & verbosity', [
-        'python simplerecondorking.py -d \'site:target.com\' --sources bing -v 4',
-        'python simplerecondorking.py -t target.com --dork-category files --profile fast --quiet',
+        '# -v 1 is the DEFAULT: per-(source,dork) hit counts as the run goes',
+        'python simplerecondorking.py -d \'site:target.com\'',
         'python simplerecondorking.py -d \'site:target.com\' -v 2     # show HTTP status codes',
         'python simplerecondorking.py -d \'site:target.com\' -v 3     # also show filtered-out URLs',
+        'python simplerecondorking.py -d \'site:target.com\' --sources bing -v 4',
+        '# quieter than the default',
+        'python simplerecondorking.py -d \'site:target.com\' -v 0     # counters only, no per-source lines',
+        'python simplerecondorking.py -t target.com --dork-category files --profile fast --quiet',
     ]),
     ('Piping into httpx (HTTP probing)', [
         'python simplerecondorking.py -t target.com --dork-category files --no-banner | httpx -silent',

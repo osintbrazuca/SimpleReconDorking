@@ -68,7 +68,11 @@ _PARSER_DEFAULTS: dict[str, object] = {
     'header_file': None,
     'header_source': None,
     'header_profile': None,
-    'verbose': 0,
+    # Must track cli/parser.py's default (1), not the old 0. apply_run_config()
+    # decides "the user set this explicitly" by comparing against this value, so
+    # a stale 0 here would make an untouched -v look explicit and silently drop
+    # a run-config's own "verbose" - the config would appear to be ignored.
+    'verbose': 1,
     'quiet': False,
     'no_banner': False,
     'no_color': False,

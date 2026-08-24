@@ -48,7 +48,8 @@
     "header_source": null,
     "header_profile": null,
 
-    "verbose": 0,
+    "_verbose_note": "1 is the tool default (per-source hit counts). 0 = counters only; 4 = full debug. A run-config value only applies when the CLI did not pass -v.",
+    "verbose": 1,
     "quiet": false,
     "no_banner": false,
     "no_color": false

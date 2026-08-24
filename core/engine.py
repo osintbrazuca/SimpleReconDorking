@@ -393,7 +393,16 @@ class Engine:
             return cls(
                 timeout=self.args.timeout,
                 rate_limit=rate_limit,
-                verbose=self.verbose,
+                # Quiet wins over verbosity for the SOURCES, because
+                # BaseSource._vlog() prints to stdout and has no quiet check of
+                # its own (Engine.vlog does). Without this, -q/--no-banner -
+                # which promises "only the final URL list" - would splice
+                # '[*] [searx] ...' lines into the URL stream that
+                # `... --no-banner | httpx -silent` consumes. Latent until -v 1
+                # became the default; now it is the default path.
+                # self.verbose stays untouched, so `include_extras` (-v 3) still
+                # governs data in the output/DB, which quiet is not about.
+                verbose=0 if self.quiet else self.verbose,
                 **routing,
                 user_agent=_ua_for(name),
                 pages=pages,
