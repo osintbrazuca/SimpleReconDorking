@@ -435,7 +435,19 @@ def build_parser() -> argparse.ArgumentParser:
              '(ahmia, torch, tor66, tordex) and nothing else (default: '
              'socks5h://127.0.0.1:9050). Keep the socks5h scheme: .onion has no public '
              'DNS, so the hostname must be resolved by Tor, not locally. These sources '
-             'never use the --proxy pool, so both can be set in one run.',
+             'never use the --proxy pool, so both can be set in one run. Have no Tor '
+             'daemon at all? See --no-tor.',
+    )
+    net_group.add_argument(
+        '--no-tor',
+        action='store_true',
+        help='Skip the sources that can only be reached through Tor (ahmia, torch, '
+             'tor66, tordex), instead of letting each one fail with "Tor not reachable". '
+             'Off by default because the tool cannot tell "no daemon" from "daemon '
+             'temporarily down", and silently dropping darkweb coverage from a --profile '
+             'full run is the wrong guess to make for someone who does run Tor. Does NOT '
+             'drop onionsearch/tor66web: those index .onion over plain clearnet HTTP and '
+             'are exactly what still answers without a daemon.',
     )
     net_group.add_argument(
         '--proxy-source', metavar='LIST',
@@ -585,12 +597,23 @@ def print_sources() -> None:
             return C.gray('[free-text only]')
         return ''
 
+    def _tor_badge(cls) -> str:
+        # Read off REQUIRES_TOR rather than restated in each DESCRIPTION, so the
+        # badge and the source's actual routing cannot drift apart - and so this
+        # listing answers "what does --no-tor drop?" exactly.
+        if getattr(cls, 'REQUIRES_TOR', False):
+            return C.yellow('[needs Tor]')
+        return ''
+
     print(f'\n{C.bold(C.white("Available search sources:"))}\n')
-    print(f'  {C.gray("free-text only = does not parse site:/ext:/inurl: etc.; the dork is downgraded automatically")}\n')
+    print(f'  {C.gray("free-text only = does not parse site:/ext:/inurl: etc.; the dork is downgraded automatically")}')
+    print(f'  {C.gray("needs Tor      = onion-only, requires a running Tor daemon (--tor-proxy); skipped by --no-tor")}\n')
     for category, sources in by_category().items():
         print(f'  {C.bold(C.cyan(category.upper()))}')
         for cls in sources.values():
-            badges = ' '.join(b for b in (_key_badge(cls), _op_badge(cls)) if b)
+            badges = ' '.join(
+                b for b in (_key_badge(cls), _tor_badge(cls), _op_badge(cls)) if b
+            )
             suffix = f'  {badges}' if badges else ''
             print(f'    {C.cyan(f"{cls.NAME:<14}")} {cls.DESCRIPTION}{suffix}')
         print()
@@ -770,6 +793,12 @@ _EXAMPLES: list[tuple[str, list[str]]] = [
         'python simplerecondorking.py -d \'vazamento\' --category darkweb --tor-proxy socks5h://127.0.0.1:9150',
         '# Tor and a clearnet proxy coexist: --proxy never touches the darkweb sources',
         'python simplerecondorking.py -d \'x\' --sources ahmia,yahoo --proxy http://a:8080',
+        '# no Tor daemon at all? --no-tor drops the four onion-only sources so a',
+        '# broad run stops emitting "Tor not reachable" once per source per dork',
+        'python simplerecondorking.py -d \'teste\' --profile full --no-tor',
+        '# it keys on "needs a daemon", not on the darkweb category, so this still',
+        '# runs onionsearch + tor66web - the two that answer over clearnet',
+        'python simplerecondorking.py -d \'minhaempresa.com\' --profile tor --no-tor',
         '# no Tor daemon at all? the two clearnet ones still answer',
         'python simplerecondorking.py -d \'minhaempresa.com\' --sources tor66web,onionsearch',
         '# onionsearch is clearnet (no Tor needed) but Cloudflare-gated; if it 403s,',

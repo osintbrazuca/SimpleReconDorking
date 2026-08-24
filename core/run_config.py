@@ -60,6 +60,7 @@ _PARSER_DEFAULTS: dict[str, object] = {
     'proxy_ban_after': 3,
     'proxy_fallback_direct': False,
     'tor_proxy': 'socks5h://127.0.0.1:9050',
+    'no_tor': False,
     'user_agent': 'SimpleReconDorking/1',
     'ua_file': None,
     'ua_source': None,

@@ -55,7 +55,7 @@ _REDIRECT_RE = re.compile(r'redirect_url=([^"&]+(?:&amp;[^"&]+)*)')
 
 class Ahmia(BaseSource):
     NAME = 'ahmia'
-    DESCRIPTION = 'Ahmia - filtered Tor hidden-service index, open source (needs Tor)'
+    DESCRIPTION = 'Ahmia - filtered Tor hidden-service index, open source'
     CATEGORY = 'darkweb'
     REQUIRES_TOR = True
     SUPPORTS_OPERATORS = False

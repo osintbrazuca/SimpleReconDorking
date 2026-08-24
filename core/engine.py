@@ -232,6 +232,34 @@ class Engine:
         if exclude:
             sources = {k: v for k, v in sources.items() if k not in exclude}
 
+        # --no-tor, applied here for the same reason --exclude is: the four
+        # branches above are mutually exclusive, so a filter placed inside any
+        # of them would miss the others. It also has to run AFTER the profile
+        # branch, which is where apply_run_config() lands a profile's `options`
+        # block - a profile setting no_tor would otherwise be read before it
+        # was applied.
+        #
+        # Keyed on REQUIRES_TOR, never on CATEGORY == 'darkweb': six sources are
+        # darkweb but only four are onion-only. onionsearch and tor66web reach
+        # their indexes over plain clearnet HTTP and are precisely what still
+        # answers on a machine with no daemon - dropping them here would gut the
+        # flag for the very operator asking for it.
+        if getattr(self.args, 'no_tor', False):
+            skipped = sorted(
+                name for name, cls in sources.items()
+                if getattr(cls, 'REQUIRES_TOR', False)
+            )
+            if skipped:
+                sources = {k: v for k, v in sources.items() if k not in skipped}
+                # One line for the whole set. Letting these run instead costs
+                # len(skipped) x len(dorks) copies of the same "Tor not
+                # reachable" hint, since the plan is a cartesian product.
+                self.vlog(
+                    1,
+                    f'[*] [no-tor] skipping {len(skipped)} source(s) that need a Tor '
+                    f'daemon: {", ".join(skipped)}',
+                )
+
         return sources
 
     # ------------------------------------------------------------------
@@ -295,7 +323,10 @@ class Engine:
 
         sources = self._select_sources()
         if not sources:
-            self._abort('No sources selected - check --sources/--profile/--category/--exclude.')
+            self._abort(
+                'No sources selected - check '
+                '--sources/--profile/--category/--exclude/--no-tor.'
+            )
 
         rate_limit: int = getattr(self.args, 'rate_limit', 0) or 0
         # Built here, AFTER _select_sources() above - a profile's `options`

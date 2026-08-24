@@ -38,7 +38,7 @@ _SEARCH = _BASE + '/search?q={q}&sorttype=rel&page={page}'
 
 class Tor66(BaseSource):
     NAME = 'tor66'
-    DESCRIPTION = 'Tor66 - Tor index with fresh-service directory (needs Tor)'
+    DESCRIPTION = 'Tor66 - Tor index with fresh-service directory'
     CATEGORY = 'darkweb'
     REQUIRES_TOR = True
     SUPPORTS_OPERATORS = False

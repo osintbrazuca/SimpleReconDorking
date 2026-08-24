@@ -32,7 +32,7 @@ _SEARCH = _BASE + '/search?query={q}'
 
 class Torch(BaseSource):
     NAME = 'torch'
-    DESCRIPTION = 'Torch - long-running, unfiltered Tor index (needs Tor)'
+    DESCRIPTION = 'Torch - long-running, unfiltered Tor index'
     CATEGORY = 'darkweb'
     REQUIRES_TOR = True
     SUPPORTS_OPERATORS = False

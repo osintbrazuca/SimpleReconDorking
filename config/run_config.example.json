@@ -37,6 +37,8 @@
 
     "_tor_note": "tor_proxy is used ONLY by the darkweb sources (ahmia, torch, tor66, tordex); keep the socks5h scheme so Tor resolves .onion.",
     "tor_proxy": "socks5h://127.0.0.1:9050",
+    "_no_tor_note": "true skips those same four sources entirely - for machines with no Tor daemon, where they would only fail. onionsearch and tor66web are NOT skipped: they reach .onion over clearnet.",
+    "no_tor": false,
 
     "user_agent": "SimpleReconDorking/1",
     "ua_file": null,

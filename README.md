@@ -614,6 +614,26 @@ Sem Tor acessível, as quatro fontes `REQUIRES_TOR` se comportam como as fontes 
 [*] [ahmia] Tor not reachable at socks5h://127.0.0.1:9050 - is the Tor daemon running?
 ```
 
+### `--no-tor`: pular as fontes que exigem daemon
+
+Numa máquina sem Tor, essa dica aparece **uma vez por fonte por dork** — o plano é o produto cartesiano, então `--profile full` com 10 dorks rende 40 linhas idênticas. O `--no-tor` tira as quatro da seleção antes do plano ser montado:
+
+```bash
+python simplerecondorking.py -d 'teste' --profile full --no-tor
+```
+
+O contador `Sources:` do cabeçalho cai em 4 e a barra de progresso deixa de contar tarefas que nunca poderiam produzir nada.
+
+> [!IMPORTANT]
+> A flag chaveia em `REQUIRES_TOR`, **não** na categoria `darkweb`. São seis fontes darkweb e só quatro precisam de daemon: `onionsearch` e `tor66web` indexam `.onion` por HTTP clearnet e continuam rodando. São justamente as que ainda respondem sem Tor — filtrar por categoria removeria exatamente o que interessa a quem usa a flag.
+
+```bash
+# roda só onionsearch + tor66web
+python simplerecondorking.py -d 'minhaempresa.com' --profile tor --no-tor
+```
+
+O padrão é desligado de propósito: a ferramenta não consegue distinguir "não tenho daemon" de "meu daemon caiu agora", e descartar cobertura darkweb em silêncio é o palpite errado para quem *usa* Tor. Pedir explicitamente uma fonte Tor junto com `--no-tor` (`--sources ahmia --no-tor`) esvazia a seleção e para com `exit 2`; se sobrar alguma fonte (`--sources ahmia,yahoo --no-tor`), a execução segue e o skip é registrado numa linha.
+
 Se aparecer aviso de SOCKS faltando, o extra do httpx não foi instalado: `pip install 'httpx[socks]'`.
 
 > [!NOTE]

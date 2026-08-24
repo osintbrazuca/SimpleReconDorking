@@ -26,7 +26,7 @@ _SEARCH = _BASE + '/search?query={q}&page={page}'
 
 class Tordex(BaseSource):
     NAME = 'tordex'
-    DESCRIPTION = 'TorDex - broad unfiltered Tor index, real pagination (needs Tor)'
+    DESCRIPTION = 'TorDex - broad unfiltered Tor index, real pagination'
     CATEGORY = 'darkweb'
     REQUIRES_TOR = True
     SUPPORTS_OPERATORS = False
