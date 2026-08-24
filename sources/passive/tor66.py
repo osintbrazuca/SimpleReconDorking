@@ -8,7 +8,7 @@ result set.
 Tor66 renders a lot of its own navigation as absolute onion links (its home,
 /about, /fresh, /random, /submit_onion_url, plus a `/serviceinfo/?service=...`
 detail link next to every hit), so its own address is listed in
-assets/txt/search_engine_domains.txt and dropped by BaseSource's
+config/search_engine_domains.txt and dropped by BaseSource's
 is_source_chrome() check - the same treatment every clearnet engine in this
 catalog already gets. Its real results live on other onion domains, which is
 exactly the condition that file's convention requires before adding an entry.

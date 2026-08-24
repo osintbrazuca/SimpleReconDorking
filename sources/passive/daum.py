@@ -6,7 +6,7 @@ Verified live (2026-08): returns real external result links in static HTML
 ecosystem links), though with more chrome noise than Naver or Seznam -
 Daum interleaves results with links into its own Map/Shopping/Dictionary
 sub-services (map.kakao.com, shoppinghow.kakao.com, dic.daum.net), filtered
-via assets/txt/search_engine_domains.txt like every other engine's chrome.
+via config/search_engine_domains.txt like every other engine's chrome.
 
 Pagination: `p=` (page number) was tested and made no measurable difference
 to the result set, so this fetches a single page regardless of --pages until

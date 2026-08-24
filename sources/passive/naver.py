@@ -10,7 +10,7 @@ Pagination: the historical `start=` offset parameter was tested and made no
 measurable difference to the result set (0 new links on a second page), so
 this fetches a single page regardless of --pages until a working offset
 parameter is confirmed. Naver's own CDN domains (pstatic.net, naver.net) are
-filtered via assets/txt/search_engine_domains.txt, same mechanism as every
+filtered via config/search_engine_domains.txt, same mechanism as every
 other engine's chrome links.
 """
 import re

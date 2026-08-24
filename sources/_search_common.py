@@ -13,13 +13,17 @@ fingerprint and polite pacing.
 import asyncio
 import random
 
-from core.assets import load_lines
+from core.assets import load_config_lines, load_lines
 
 # Default from cli/parser.py - used to tell "user left it alone" from
 # "user explicitly asked for this UA".
 _TOOL_DEFAULT_UA = 'SimpleReconDorking/1'
 
-# Data lives in assets/txt/ so it can be edited without touching code.
+# Data lives in a file so it can be edited without touching code. The two sit
+# in different directories on purpose: the UA pool is fodder the code rotates
+# through, while the domain blocklist is a curated list an operator extends
+# whenever a new source starts leaking its own chrome - so it lives in config/
+# next to profiles.json, and is read with the config/ loader.
 _UA_FILE = 'user_agents.txt'
 _ENGINE_DOMAIN_FILE = 'search_engine_domains.txt'
 
@@ -81,14 +85,14 @@ def is_source_chrome(host: str, keep_host: str | None = None) -> bool:
 
     *keep_host* is the --filter-host value when one is set: if the operator is
     deliberately dorking one of these domains, its URLs must survive the
-    filter. When assets/txt/search_engine_domains.txt is missing the check
+    filter. When config/search_engine_domains.txt is missing the check
     degrades to a no-op rather than dropping anything.
     """
     if not host:
         return False
     if keep_host and (host == keep_host or host.endswith(f'.{keep_host}')):
         return False
-    engine_domains = load_lines(_ENGINE_DOMAIN_FILE)
+    engine_domains = load_config_lines(_ENGINE_DOMAIN_FILE)
     if not engine_domains:
         return False
     return any(host == d or host.endswith(f'.{d}') for d in engine_domains)

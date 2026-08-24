@@ -7,7 +7,7 @@ engines) that can be minutes of silence. This module draws one line that is
 rewritten in place with '\\r', so the scrollback the user already has on
 screen is never erased:
 
-    [*] [##########------] 62% | runs 148/240 | 1841 urls (+412) | now site:target.com ext:sql
+    [*] [##########------]  62% | runs 148/240 | req 93 | hosts 46 | urls 1841 | now site:target.com ext:sql
 
 Two things here are load-bearing:
 
@@ -85,6 +85,14 @@ class Progress:
         # searxbrowser) makes the number climb - which is exactly the
         # information the line was missing.
         self._hosts: set[str] = set()
+        # URLs reported by tasks still in flight, on top of self.urls. Same
+        # problem 'requests' and '_hosts' solve, for the counter that matters
+        # most: self.urls can only move when a whole task ends (advance() is
+        # its only writer), so a run of two tasks where the fast one finds
+        # nothing shows 'urls 0' for the entire duration of the slow one.
+        # Cleared by advance(), which is what keeps this from drifting - see
+        # note_urls().
+        self._live_urls: set[str] = set()
         self._drawn = False
         self._last_render = 0.0
         self._stream = stream if stream is not None else sys.stderr
@@ -142,6 +150,14 @@ class Progress:
         filled = round(_BAR_WIDTH * pct / 100)
         return '[' + '#' * filled + '-' * (_BAR_WIDTH - filled) + ']'
 
+    def _url_count(self) -> int:
+        """URLs to show: the last authoritative total plus what is in flight.
+
+        self.urls is exact but only moves at task boundaries; _live_urls is the
+        provisional remainder reported by running tasks. See note_urls().
+        """
+        return self.urls + len(self._live_urls)
+
     def _compose(self, width: int) -> str:
         """Build the line, dropping parts by priority when width is tight.
 
@@ -150,12 +166,18 @@ class Progress:
         (engine, dork) tasks scheduled this invocation, 'urls' counts unique
         URLs found so far. The counters are the point of the feature, so they
         are the last thing dropped.
+
+        There is no '(+N new)' half any more: `new` was self.urls - baseline,
+        and baseline is always 0 here (the sole real construction site passes
+        0; the parameter exists only for call-site symmetry with the rest of
+        the SimpleRecon family). It therefore always restated the number it sat
+        next to, and once the count went provisional the two halves would have
+        had to disagree about which one included the in-flight URLs.
         """
         pct = self._pct()
-        new = self.urls - self.baseline
         bar = self._bar(pct)
         runs = f'runs {self.done}/{self.total}'
-        urls = f'urls {self.urls} (+{new} new)'
+        urls = f'urls {self._url_count()}'
         work = f'req {self.requests} | hosts {len(self._hosts)}'
 
         base = f'[*] {bar} {pct:3d}% | {runs} | {work} | {urls}'
@@ -171,11 +193,11 @@ class Progress:
             base,                                              # drop the query
             f'[*] {bar} {pct:3d}% | {runs} | {urls}',          # drop req/hosts
             f'[*] {pct:3d}% | {runs} | {urls}',                # drop the bar
-            f'[*] {pct:3d}% | {self.done}/{self.total} | {self.urls} (+{new})',
+            f'[*] {pct:3d}% | {self.done}/{self.total} | {self._url_count()}',
         ):
             if len(line) <= width:
                 return line
-        return f'{self.done}/{self.total} {self.urls}u'[:width]
+        return f'{self.done}/{self.total} {self._url_count()}u'[:width]
 
     def _render(self, force: bool = False) -> None:
         if not self.enabled:
@@ -238,6 +260,34 @@ class Progress:
                 self._hosts.add(host)
         self._render()
 
+    def note_urls(self, urls: set[str]) -> None:
+        """A task found *urls* and has not finished yet.
+
+        The result counterpart of note_request(). Without it the number on the
+        line is hostage to task boundaries: `advance()` is the only writer of
+        self.urls, so `--sources searx,searxbrowser` (two tasks, one of them
+        walking 72 instances for minutes) reads `urls 0` throughout whenever
+        the quick task happens to find nothing.
+
+        **Provisional on purpose.** A batch reported here has not been through
+        BaseSource._filter_urls() yet - the source's own chrome is still in it
+        and --filter-* has not run - and two concurrent tasks can report the
+        same URL, so this can read slightly high. advance() reconciles to the
+        engine's authoritative dedup count at every task boundary, so the
+        overshoot is transient and bounded by one task's worth of results.
+
+        Deduplicating in a private set rather than in the engine's
+        DeduplicatedSet is deliberate: engine.py derives each source's own hit
+        count from what `dedup.update()` reports back as new, so feeding that
+        set early would zero out per-source attribution. The private set stays
+        small precisely because advance() empties it - at most what the tasks
+        in flight have reported since the last boundary.
+        """
+        if not self.enabled or not urls:
+            return
+        self._live_urls |= urls
+        self._render()
+
     def start(self, query: str) -> None:
         """A task began; show its dork so the line moves even on slow engines."""
         if not self.enabled:
@@ -251,6 +301,13 @@ class Progress:
             return
         self.done += 1
         self.urls = urls
+        # The engine just handed over ground truth, so whatever note_urls()
+        # accumulated is now either counted in it or was never real. Dropping
+        # it wholesale also discards what tasks still in flight had reported;
+        # they re-report as they go, and understating briefly beats letting an
+        # unfiltered estimate ride on top of an exact number. Same trade the
+        # unit pool makes in note_unit().
+        self._live_urls.clear()
         self._render(force=self.done >= self.total)
 
     def finish(self) -> None:

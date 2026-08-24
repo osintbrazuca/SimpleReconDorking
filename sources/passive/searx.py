@@ -32,13 +32,56 @@ shaped almost entirely around that fact.
    Referer and a pause. Hence one instance at a time, with polite_sleep()
    between them - never gather().
 
-Category expansion is where the yield actually comes from. Measured on one
-instance with the same query: instance default = 59 results, adding an
-explicit ten-engine `&engines=` list = 66 (marginal), but
-`&categories=general,it,science,files` = 249. The `engines` parameter is
-therefore NOT used; categories are. images/videos/music/social are left out
-on purpose - they return media and profile URLs, which is noise for a tool
-whose output is meant to be fed to httpx/nuclei.
+Expansion is where the yield actually comes from, and there are TWO separate
+levers. Do not conflate them - they are different SearXNG mechanisms, and a
+measurement of one says nothing about the other.
+
+*Lever 1, categories.* Measured on one instance with the same query: instance
+default = 59 results, `&categories=general,it,science,files` = 249. See
+_CATEGORIES. images/videos/music/social are left out on purpose - they return
+media and profile URLs, which is noise for a tool whose output is meant to be
+fed to httpx/nuclei.
+
+The same measurement tried an explicit ten-engine **`&engines=`** list and got
+66 (marginal), which is why that parameter is still not used. `&engines=` is a
+per-search *selector*, parsed in SearXNG's webadapter, and it can only pick
+among engines the instance is already willing to run - so restricting to ten
+mainstream ones it already ran changed almost nothing. That result does NOT
+generalise to lever 2 below, which is a different parameter reaching a
+different part of SearXNG.
+
+*Lever 2, the engine roster* (the `engines` list in config/searx.json, applied
+by engine_prefs()). A public
+instance only queries the engines its own settings.yml leaves enabled, and most
+ship yandex, baidu, sogou, quark, 360search, naver, seznam, mojeek, yacy, wiby
+and mwmbl as `disabled: true`. Selecting categories does not turn those on -
+inside each category the instance default still applies. `enabled_engines` is
+a *preference*, parsed in SearXNG's preferences layer, and it does.
+
+>>> MEASURED LIVE (2026-08), `site:gov.br filetype:pdf`, pages=1. <<<
+Two instances, expansion off -> on:
+
+    search.mectov.my.id      20 ->  126 urls
+    search.lumy.live         42 ->  134 urls
+
+Raw counts undersell it, because the *baseline was not answering the dork at
+all*: of mectov's 20 default-engine URLs, *zero* were on a gov.br host and zero
+were PDFs (they were gemini.google.com locale variants and job boards). With
+the roster: 36 on gov.br, 23 PDFs, 21 satisfying both halves of the dork.
+The honest headline is therefore **0 -> 21 dork-matching URLs**, not 20 -> 126.
+
+The flip side, also measured: the roster includes engines that do not parse
+search operators (wiby, mwmbl, yacy, openlibrary, the wikis), which answer the
+literal string and contribute junk like `.../…-filetype-pdf/…`. That is
+consistent with this tool's keep-everything default - a dork's answer is
+whatever the index returned - and --filter-host/--filter-regex is the remedy
+when an operator wants it narrowed.
+
+Checked for the regression this could have caused: over a fixed 16-instance
+sample the number of instances that answered at all was **identical** with and
+without the roster (1 and 1), so the extra ~1.5KB of cookie and ~1.5KB of query
+string does not trip WAFs or cost coverage. It buys breadth per instance
+without losing instances.
 
 Instances are shuffled and queried until _WANT_OK of them produce results,
 capped by _MAX_ATTEMPTS so a fully-blocked pool cannot turn one dork into 72
@@ -50,16 +93,92 @@ import html
 import json
 import random
 import re
+from typing import NamedTuple
 
-from core.assets import load_lines
+from core.assets import load_config_list
 from sources.base import BaseSource, Dork
 from sources._search_common import browser_headers, polite_sleep
 
-_INSTANCES_FILE = 'searx_instances.txt'
+# Both lists live in one document because they answer two halves of the same
+# question - `instances` is WHERE to search, `engines` is WHAT each instance
+# searches with - and neither is useful to this source without the other.
+_DATA_FILE = 'searx.json'
 _PAGE_SIZE = 10
 
 # Textual categories only - see the module docstring for the measurement.
 _CATEGORIES = 'general,it,science,files'
+
+
+def load_instances() -> list[str]:
+    """Public SearXNG base URLs from config/searx.json, trailing '/' stripped.
+
+    Shared with sources/passive/searxbrowser.py, which walks the same pool
+    through a browser. A fresh list is returned per call so a caller may
+    shuffle it in place - core.assets caches the parsed document, and handing
+    out the cached list itself would let one task reorder the pool for every
+    other task in the run.
+    """
+    return [i.rstrip('/') for i in load_config_list(_DATA_FILE, 'instances')]
+
+
+class EnginePrefs(NamedTuple):
+    """One engine roster, rendered for each of the two channels it rides on."""
+
+    params: dict[str, str]
+    cookies: dict[str, str]
+
+
+def engine_prefs() -> EnginePrefs | None:
+    """SearXNG's `enabled_engines` preference, or None when expansion is off.
+
+    Shared with sources/passive/searxbrowser.py, which sends the identical
+    preference through Playwright instead of httpx.
+
+    **Both keys always travel together**, because SearXNG reads them as a pair:
+    `Preferences.parse_dict()` only enters its engine branch on seeing
+    `disabled_engines`, then picks `enabled_engines` out of the same mapping.
+    Sending the roster on its own is silently a no-op.
+
+    **Sent over a cookie AND the query string on purpose.** SearXNG applies
+    preferences from the cookies first and from the merged GET args second, so
+    the two are idempotent rather than competing, and whichever channel a given
+    instance version honours, the roster lands. An instance honouring neither
+    just searches its own defaults - the failure mode is today's behaviour, not
+    an error, which is what makes the redundancy free.
+
+    Both channels were verified to work *independently* before the redundancy
+    was trusted (mectov, `site:gov.br filetype:pdf`, pages=1): baseline 20 urls,
+    URL parameter alone 93, cookie alone 93, both together 110-126. Neither is
+    dead weight, and the pair beats either alone because SearXNG re-queries its
+    upstreams on every render, so two carriers of the same preference still
+    sample the engines twice (the same effect the JSON+HTML pass exploits).
+
+    An empty or missing `engines` list in config/searx.json returns None and
+    disables expansion. That is deliberately softer than the missing-instances
+    case, which ends the source: instances are the input this source cannot run
+    without, whereas the roster is an amplifier on top of a run that works
+    regardless.
+    """
+    engines = load_config_list(_DATA_FILE, 'engines')
+    if not engines:
+        return None
+    joined = ','.join(engines)
+    return EnginePrefs(
+        params={'disabled_engines': '', 'enabled_engines': joined},
+        # Quoted, with the separators octal-escaped - byte-for-byte the form the
+        # instance itself used when setting this cookie. Not cosmetic: a comma
+        # and a semicolon are cookie *syntax*, and two engine names carry a
+        # literal space ('ddg definitions', 'duckduckgo web') which is not legal
+        # in an unquoted value at all. A plain comma-joined string loses part of
+        # the roster or the whole cookie, depending on the parser.
+        cookies={
+            'disabled_engines': '',
+            'enabled_engines': '"{}"'.format(
+                joined.replace('\\', '\\\\').replace(',', '\\054').replace(';', '\\073')
+            ),
+        },
+    )
+
 
 # Stop once this many instances have actually produced URLs, and never probe
 # more than this many in total (a fully-blocked pool would otherwise cost 72
@@ -103,23 +222,30 @@ class Searx(BaseSource):
     CATEGORY = 'web'
 
     async def fetch(self, dork: Dork) -> set[str]:
-        instances = load_lines(_INSTANCES_FILE)
-        if not instances:
-            self._vlog(1, f'no instances - assets/txt/{_INSTANCES_FILE} missing or empty')
+        # load_instances() already returns a fresh list, so shuffling in place
+        # here cannot reorder the pool for any other task in the run.
+        pool = load_instances()
+        if not pool:
+            self._vlog(
+                1, f'no instances - "instances" in config/{_DATA_FILE} missing or empty'
+            )
             return set()
-
-        # list() before shuffle: load_lines caches and hands back the SAME list
-        # object every call, so shuffling in place would reorder the cache for
-        # every other task in the run.
-        pool = list(instances)
         random.shuffle(pool)
 
         q = self.query_for(dork)
         urls: set[str] = set()
         healthy = 0
+        prefs = engine_prefs()
+        if prefs is None:
+            self._vlog(
+                1,
+                f'no engine expansion - "engines" in config/{_DATA_FILE} missing or '
+                'empty; instances will search their own default engine set',
+            )
         try:
             async with self._make_client(
-                headers=browser_headers(configured_ua=self.user_agent)
+                headers=browser_headers(configured_ua=self.user_agent),
+                cookies=(prefs.cookies if prefs else None),
             ) as client:
                 # Upper bound on instances this task will touch; it may stop
                 # earlier once _WANT_OK answer, and the remaining units are
@@ -132,6 +258,11 @@ class Searx(BaseSource):
                     found = await self._search_instance(client, base, q)
                     walked += 1
                     self._progress.note_unit()
+                    # Per instance, beside the unit tick: the URL counter on the
+                    # progress line only moves when a whole (source, dork) task
+                    # ends otherwise, and this task walks up to _MAX_ATTEMPTS
+                    # hosts with a polite_sleep() between each.
+                    self._progress.note_urls(found)
                     if found:
                         healthy += 1
                         urls |= found
@@ -208,6 +339,12 @@ class Searx(BaseSource):
             'time_range': '',
             'safesearch': 0,
         }
+        # The engine roster rides the query string as well as the cookie set on
+        # the client - see engine_prefs() for why both. httpx encodes the commas
+        # and the two names containing a space, so the raw list goes in as-is.
+        prefs = engine_prefs()
+        if prefs:
+            params.update(prefs.params)
         headers = {'Referer': base + '/'}
         found: set[str] = set()
         answered = False
@@ -284,19 +421,6 @@ class Searx(BaseSource):
                 # that also fails to dedupe against the JSON copy of the very
                 # same result.
                 found |= {html.unescape(u) for u in _RESULT_RE.findall(body)}
-                answered = True
-
-        return found if answered else None
-        if resp.status_code == 200:
-            if self._looks_challenged(resp.text):
-                self._vlog(2, f'anti-bot interstitial from {base}')
-            else:
-                # html.unescape is required, not cosmetic: a result URL whose
-                # query string contains '&' is emitted as '&amp;' in the
-                # markup, and passing that through produces a malformed URL
-                # that also fails to dedupe against the JSON copy of the very
-                # same result.
-                found |= {html.unescape(u) for u in _RESULT_RE.findall(resp.text)}
                 answered = True
 
         return found if answered else None

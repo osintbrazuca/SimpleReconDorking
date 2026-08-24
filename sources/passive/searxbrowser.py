@@ -53,16 +53,46 @@ three pages). --pages is the knob; scrolling would be dead code.
 `_CONCURRENCY` trades throughput against solve rate: the proof-of-work
 competes for CPU, and an instance that solves in ~9s on its own can miss its
 budget inside a concurrent batch. Lower it to favour coverage over speed.
+
+>>> THE ENGINE ROSTER IS SHARED WITH `searx`, AND IT PAYS OFF BIGGER HERE. <<<
+Both modules send the same `enabled_engines` preference, over the same two
+channels, from the same `engines` list in config/searx.json (and walk the same
+`instances` list in that file); only the transport differs - Playwright context
+cookies + query string here, httpx jar + params there. See
+sources/passive/searx.py::engine_prefs() for the mechanism.
+
+Measured live (2026-08) on a full 72-instance walk, `site:gov.br filetype:pdf`,
+--pages 1, roster off -> on:
+
+    instances answering      35/72  ->   37/72
+    unique urls                276  ->    689
+
+The multiplier lands harder here than on `searx` for a structural reason: this
+module walks the WHOLE pool and 35-37 instances clear their gates, whereas the
+httpx path stops at _WANT_OK and typically gets one instance past them. Engine
+expansion multiplies per instance, so it compounds with the instance count.
+
+The obvious risk did NOT materialise, and the number above is the check: a
+bigger roster means the instance spends longer querying upstreams before it
+renders, and `_await_results` polls for the rendered results view, so that wait
+comes out of the SAME budget as the anti-bot challenge
+(_FIRST_SOLVE_TIMEOUT_S / _SOLVE_TIMEOUT_S). It could therefore have bought
+breadth by timing instances out. Instead the answered count went slightly UP
+(35 -> 37, i.e. inside run-to-run noise), so the budgets absorb it. Re-check
+that count - not just the URL total - if the roster is ever extended much
+further; a rising URL total with a falling instance count is a coverage
+regression wearing a win's clothing, and raising the budgets is the fix.
 """
 import asyncio
 import html
 import re
+from urllib.parse import urlencode
 
-from core.assets import load_lines
 from sources.base import BaseSource, Dork
 from sources._search_common import effective_ua
 from sources.passive.searx import (
-    _CATEGORIES, _INSTANCES_FILE, _RESULT_RE, _CHALLENGE_MARKERS,
+    _CATEGORIES, _DATA_FILE, _RESULT_RE, _CHALLENGE_MARKERS,
+    engine_prefs, load_instances,
 )
 
 # SearXNG stamps the view that rendered the page; this is the only reliable
@@ -112,14 +142,29 @@ class Searxbrowser(BaseSource):
             )
             return set()
 
-        instances = [i.rstrip('/') for i in load_lines(_INSTANCES_FILE)]
+        instances = load_instances()
         if not instances:
-            self._vlog(1, f'no instances - assets/txt/{_INSTANCES_FILE} missing or empty')
+            self._vlog(
+                1, f'no instances - "instances" in config/{_DATA_FILE} missing or empty'
+            )
             return set()
 
         q = self.query_for(dork)
         urls: set[str] = set()
         healthy = 0
+
+        # Same engine roster as `searx`, same two channels (cookie + query
+        # string) - see sources/passive/searx.py::engine_prefs(). Rendered once
+        # here rather than per instance: the roster is identical for all of
+        # them, and _visit() runs 72 times.
+        prefs = engine_prefs()
+        engine_qs = urlencode(prefs.params) if prefs else ''
+        if prefs is None:
+            self._vlog(
+                1,
+                f'no engine expansion - "engines" in config/{_DATA_FILE} missing or '
+                'empty; instances will search their own default engine set',
+            )
         try:
             async with async_playwright() as pw:
                 launch_kwargs: dict = {
@@ -139,6 +184,27 @@ class Searxbrowser(BaseSource):
                     )
                     await context.add_init_script(_STEALTH)
 
+                    if prefs:
+                        # One cookie pair per instance, because Playwright
+                        # scopes cookies by origin - there is no "send this to
+                        # every host" jar the way httpx has. A failure here is
+                        # deliberately not fatal: the query string carries the
+                        # identical preference, which is the whole point of
+                        # sending it over both channels.
+                        try:
+                            await context.add_cookies([
+                                {'name': name, 'value': value, 'url': base}
+                                for base in instances
+                                for name, value in prefs.cookies.items()
+                            ])
+                        except Exception as e:
+                            self._log_exc(e)
+                            self._vlog(
+                                1,
+                                'cookie channel unavailable - the engine roster '
+                                'rides the query string only',
+                            )
+
                     gate = asyncio.Semaphore(_CONCURRENCY)
 
                     # Declared so the progress BAR can move inside this
@@ -149,9 +215,16 @@ class Searxbrowser(BaseSource):
                     async def one(base: str) -> set[str]:
                         async with gate:
                             try:
-                                return await self._visit(context, base, q)
+                                found = await self._visit(context, base, q, engine_qs)
                             finally:
                                 self._progress.note_unit()
+                            # Per instance, for the same reason the unit tick
+                            # above exists: this is ONE task, so the URL counter
+                            # on the progress line cannot move until the whole
+                            # 72-instance walk is over. Outside the finally -
+                            # there is nothing to report when _visit() raised.
+                            self._progress.note_urls(found)
+                            return found
 
                     for found in await asyncio.gather(
                         *(one(b) for b in instances), return_exceptions=True
@@ -171,7 +244,7 @@ class Searxbrowser(BaseSource):
             self._log_exc(e)
         return self._filter_urls(urls)
 
-    async def _visit(self, context, base: str, q: str) -> set[str]:
+    async def _visit(self, context, base: str, q: str, engine_qs: str = '') -> set[str]:
         """Render every requested page of one instance."""
         found: set[str] = set()
         page = await context.new_page()
@@ -181,6 +254,8 @@ class Searxbrowser(BaseSource):
                     f'{base}/search?q={q}&pageno={pageno}&categories={_CATEGORIES}'
                     '&language=auto&time_range=&safesearch=0&theme=simple'
                 )
+                if engine_qs:
+                    url += f'&{engine_qs}'
                 self._progress.note_request(url)
                 try:
                     await page.goto(url, wait_until='domcontentloaded',

@@ -33,7 +33,7 @@ healthy and contributes nothing.
 Pagination confirmed by diffing rather than by trusting the parameter: page
 2 carried 10 links absent from page 1.
 
-No entry is needed in assets/txt/search_engine_domains.txt for tor66.org:
+No entry is needed in config/search_engine_domains.txt for tor66.org:
 ONION_HREF_RE only ever matches a 56-char v3 .onion address, so this host's
 own navigation links cannot be captured in the first place.
 """
